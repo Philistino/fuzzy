@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -188,9 +189,9 @@ func Load(filename string) (*Model, error) {
 	model, err := FromReader(f)
 	if err != nil {
 		model = new(Model)
-		if err1 := model.convertOldFormat(filename); err1 != nil {
-			return model, err1
-		}
+		// if err1 := model.convertOldFormat(filename); err1 != nil {
+		// 	return model, err1
+		// }
 		return model, nil
 	}
 	return model, nil
@@ -569,11 +570,12 @@ func (model *Model) SpellCheckSuggestions(input string, n int) []string {
 
 func SampleEnglish() []string {
 	var out []string
-	file, err := os.Open("data/big.txt")
+	file, err := os.Open("./data/big.txt")
 	if err != nil {
 		fmt.Println(err)
 		return out
 	}
+	defer file.Close()
 	reader := bufio.NewReader(file)
 	scanner := bufio.NewScanner(reader)
 	scanner.Split(bufio.ScanLines)
@@ -645,4 +647,26 @@ func (model *Model) Autocomplete(input string) ([]string, error) {
 		return a.Results[:10], nil
 	}
 	return a.Results, nil
+}
+
+func TrainOnSampleEnglish() *Model {
+	cpu := runtime.NumCPU()
+	runtime.GOMAXPROCS(cpu)
+	model := NewModel()
+	dict := SampleEnglish()
+	piece := len(dict) / cpu
+
+	var wg sync.WaitGroup
+	// Train concurrently
+	for i := 0; i < cpu; i++ {
+		wg.Add(1)
+		go func(i int) {
+			begin := i * piece
+			end := (i+1)*piece - 1
+			model.Train(dict[begin:end])
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	return model
 }

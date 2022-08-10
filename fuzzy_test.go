@@ -387,12 +387,6 @@ func TestAutocompleteFromQueries(t *testing.T) {
 	}
 }
 
-func TestLoadOldModel(t *testing.T) {
-	if _, err := Load("data/test.dict"); err != nil {
-		t.Errorf("Couldn't load old model format: %v", err)
-	}
-}
-
 func TestEditsMulti(t *testing.T) {
 	model := NewModel()
 	got := model.EditsMulti("elephant", model.Depth)
@@ -419,5 +413,12 @@ func BenchmarkEditsMulti(b *testing.B) {
 	model := NewModel()
 	for i := 0; i < b.N; i++ {
 		result = model.EditsMulti("elephant", model.Depth)
+	}
+}
+
+func BenchmarkTrainOnSample(b *testing.B) {
+	model := NewModel()
+	for i := 0; i < b.N; i++ {
+		model.Train(sampleEnglish)
 	}
 }
